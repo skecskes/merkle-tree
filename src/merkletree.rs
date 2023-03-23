@@ -1,4 +1,3 @@
-
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
@@ -110,10 +109,8 @@ impl MerkleTree {
 
     /// Returns a list of hashes that can be used to prove that the given data is in this tree
     pub fn prove(&self, data: &Data) -> Option<Proof> {
-        // todo!("Exercise 3")
         let leaf = hash_data(data);
-        let proofs = traverse_and_collect_proofs(&self.root, &leaf);
-        proofs
+        traverse_and_collect_proofs(&self.root, &leaf)
     }
 }
 
@@ -125,7 +122,7 @@ fn traverse_and_collect_proofs<'a>(node: &'a Node, searched_leaf: &'a Hash) -> O
         // going deeper to the left Node and searching for Leaf
         let proofs = traverse_and_collect_proofs(&node.left.as_ref().unwrap(), searched_leaf);
         if proofs.is_some() {
-            // collecting proofs during bubbling up
+            // collecting proofs during bubbling up from left
             let mut proof = proofs.unwrap();
             let value: &Hash = node.right.as_ref().unwrap().value.as_ref();
             proof.hashes.push((HashDirection::Right, value.clone()));
@@ -136,7 +133,7 @@ fn traverse_and_collect_proofs<'a>(node: &'a Node, searched_leaf: &'a Hash) -> O
         // going deeper to the right Node and searching for Leaf
         let proofs = traverse_and_collect_proofs(&node.right.as_ref().unwrap(), searched_leaf);
         if proofs.is_some() {
-            // collecting proofs during bubbling up
+            // collecting proofs during bubbling up from right
             let mut proof = proofs.unwrap();
             let value: &Hash = node.left.as_ref().unwrap().value.as_ref();
             proof.hashes.push((HashDirection::Left, value.clone()));
@@ -328,5 +325,33 @@ mod tests {
         assert_eq!(expected.hashes, actual.expect("this should return Proof").hashes);
 
         assert_eq!(tree.root(), root_hash);
+    }
+
+    #[test]
+    fn test_prove_that_one_node_with_correct_proofs_will_prove_the_leaf() {
+        // special tree where leaf is the only node and therefore is root as well.
+        // As such it will no need proofs
+        let data = example_data(1);
+
+        let tree = MerkleTree::construct(&data);
+        let hash1 = hash_data(&data[0]);
+
+        let actual = tree.prove(&data[0]);
+        let expected = Proof {
+            hashes: vec![]
+        };
+        assert_eq!(expected.hashes, actual.expect("this should return Proof").hashes);
+        assert_eq!(tree.root(), hash1);
+    }
+
+    #[test]
+    fn test_prove_that_tree_with_incorrect_leaf_will_return_none() {
+        let data = example_data(2);
+        let tree = MerkleTree::construct(&data);
+
+        let invalid_leaf = vec![10 as u8] as Data;
+        let actual = tree.prove(&invalid_leaf);
+
+        assert_eq!(actual.is_none(), true);
     }
 }
